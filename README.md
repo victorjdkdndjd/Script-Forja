@@ -1,6 +1,6 @@
-# Forja — GitHub Pages
+# Forja v3.2.1
 
-Versão com correção dos seletores mobile:
-- tocar na opção atual não recria/resetta a configuração;
-- selects nativos do Android são bloqueados e substituídos pelo seletor visual da Forja;
-- rolagem continua sem selecionar por acidente.
+Versão bilíngue PT-BR / EN do site, com tradução completa da interface atual.
+
+## GitHub Pages
+Envie `index.html` para a raiz do repositório e publique a branch `main` em Settings → Pages.
