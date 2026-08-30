@@ -1,0 +1,33 @@
+{
+  "version": "3.5.0",
+  "triggers": [
+    "A cada intervalo",
+    "Entidade recebe dano do player",
+    "Jogador olha para entidade",
+    "Jogador entrou na coordenada",
+    "Jogador saiu da área",
+    "Jogador encostou na entidade",
+    "Entidade encosta na parede",
+    "Entidade está escalando",
+    "Entidade está nadando"
+  ],
+  "conditions": [
+    "Está olhando para entidade",
+    "Está encostando em entidade",
+    "Está dentro da coordenada/área",
+    "Está encostando na parede",
+    "Está escalando",
+    "Está nadando"
+  ],
+  "actions": [
+    "Colocar bloco",
+    "Remover bloco",
+    "Executar comando",
+    "Adicionar tag",
+    "Colocar baú com itens",
+    "Adicionar formulário livre",
+    "Lanterna projetada",
+    "Luz acompanha jogador",
+    "Bloco segue jogador"
+  ]
+}
