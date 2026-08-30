@@ -4,30 +4,57 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#11131a">
-  <title>Script Forja v3.4.1</title>
+  <title>Script Forja v3.4.2</title>
   <style>
     html,body{width:100%;height:100%;margin:0;background:#0d0f14;overflow:hidden}
     #forjaLegacy{display:block;width:100%;height:100%;border:0;background:#0d0f14}
   </style>
 </head>
 <body>
-  <iframe id="forjaLegacy" src="./legacy.html?v=3.4.1" title="Script Forja v3.4.1"></iframe>
+  <iframe id="forjaLegacy" src="./legacy.html?v=3.4.2" title="Script Forja v3.4.2"></iframe>
   <script>
   (()=>{
     const frame=document.getElementById('forjaLegacy');
-    const fix=()=>{
+    let patchedDoc=null;
+
+    function prepareLegacy(){
       try{
         const d=frame.contentDocument;
         if(!d)return;
+
         const badge=d.getElementById('site-version');
-        if(badge) badge.textContent='v3.4.1';
-        d.title='Forja v3.4.1 — Scripts e Componentes';
-      }catch{}
-    };
-    frame.addEventListener('load',()=>{fix();setTimeout(fix,100);setTimeout(fix,800)});
-    setInterval(fix,1500);
+        if(badge) badge.textContent='v3.4.2';
+        d.title='Forja v3.4.2 — Scripts e Componentes';
+
+        const stack=d.getElementById('stack');
+        if(!stack)return;
+
+        // Compatibilidade da extensão visual: a Forja antiga usa #stack,
+        // enquanto a primeira versão da extensão procurava #apphost.
+        if(patchedDoc!==d){
+          const nativeGet=d.getElementById.bind(d);
+          d.getElementById=(id)=>id==='apphost'?nativeGet('stack'):nativeGet(id);
+          patchedDoc=d;
+        }
+
+        // O primeiro iframe criado por show("scripts") é o editor de Scripts.
+        // Damos um título para o forja.js reconhecê-lo e montar os blocos visuais.
+        const scriptsFrame=stack.querySelector('iframe');
+        if(scriptsFrame && !(scriptsFrame.title||'').toLowerCase().includes('script')){
+          scriptsFrame.title='scripts';
+        }
+      }catch(e){ console.warn('[Forja bootstrap]',e); }
+    }
+
+    frame.addEventListener('load',()=>{
+      prepareLegacy();
+      setTimeout(prepareLegacy,40);
+      setTimeout(prepareLegacy,150);
+      setTimeout(prepareLegacy,600);
+    });
+    setInterval(prepareLegacy,1000);
   })();
   </script>
-  <script src="./forja.js?v=3.4.1"></script>
+  <script src="./forja.js?v=3.4.2"></script>
 </body>
 </html>
