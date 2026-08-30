@@ -4,16 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#11131a">
-  <title>Script Forja v3.4.2</title>
+  <title>Script Forja v3.4.3</title>
   <style>
     html,body{width:100%;height:100%;margin:0;background:#0d0f14;overflow:hidden}
     #forjaLegacy{display:block;width:100%;height:100%;border:0;background:#0d0f14}
   </style>
 </head>
 <body>
-  <iframe id="forjaLegacy" src="./legacy.html?v=3.4.2" title="Script Forja v3.4.2"></iframe>
+  <iframe id="forjaLegacy" src="./legacy.html?v=3.4.3" title="Script Forja v3.4.3"></iframe>
+
   <script>
   (()=>{
+    const VERSION='3.4.3';
     const frame=document.getElementById('forjaLegacy');
     let patchedDoc=null;
 
@@ -23,22 +25,20 @@
         if(!d)return;
 
         const badge=d.getElementById('site-version');
-        if(badge) badge.textContent='v3.4.2';
-        d.title='Forja v3.4.2 — Scripts e Componentes';
+        if(badge) badge.textContent='v'+VERSION;
+        d.title='Forja v'+VERSION+' — Scripts e Componentes';
 
         const stack=d.getElementById('stack');
         if(!stack)return;
 
-        // Compatibilidade da extensão visual: a Forja antiga usa #stack,
-        // enquanto a primeira versão da extensão procurava #apphost.
+        // Compatibilidade com a extensão visual atual.
         if(patchedDoc!==d){
           const nativeGet=d.getElementById.bind(d);
           d.getElementById=(id)=>id==='apphost'?nativeGet('stack'):nativeGet(id);
           patchedDoc=d;
         }
 
-        // O primeiro iframe criado por show("scripts") é o editor de Scripts.
-        // Damos um título para o forja.js reconhecê-lo e montar os blocos visuais.
+        // O primeiro iframe é a ferramenta Scripts.
         const scriptsFrame=stack.querySelector('iframe');
         if(scriptsFrame && !(scriptsFrame.title||'').toLowerCase().includes('script')){
           scriptsFrame.title='scripts';
@@ -55,6 +55,106 @@
     setInterval(prepareLegacy,1000);
   })();
   </script>
-  <script src="./forja.js?v=3.4.2"></script>
+
+  <script src="./forja.js?v=3.4.3"></script>
+
+  <script>
+  (()=>{
+    const VERSION='3.4.3';
+    const outer=document.getElementById('forjaLegacy');
+
+    const OPTIONS=[
+      ['⏱️','A cada intervalo'],
+      ['⚔️','Entidade recebe dano do player'],
+      ['👁️','Jogador olha para entidade'],
+      ['🧭','Jogador entrou na coordenada'],
+      ['📍','Jogador saiu da área'],
+      ['🤝','Jogador encostou na entidade'],
+      ['🧱','Entidade encosta na parede'],
+      ['🪜','Entidade está escalando'],
+      ['🏊','Entidade está nadando'],
+      ['➕','Colocar bloco'],
+      ['➖','Remover bloco'],
+      ['⌨️','Executar comando'],
+      ['💬','Enviar mensagem ao jogador'],
+      ['🏷️','Adicionar tag'],
+      ['🧰','Colocar baú com itens'],
+      ['🪟','Adicionar formulário livre'],
+      ['🔦','Lanterna projetada'],
+      ['💡','Luz acompanha jogador'],
+      ['🧲','Bloco segue jogador']
+    ];
+
+    function integrate(){
+      try{
+        const shell=outer.contentDocument;
+        const stack=shell?.getElementById('stack');
+        const scripts=stack?.querySelector('iframe');
+        const doc=scripts?.contentDocument;
+        if(!doc?.body)return;
+
+        // Corrige qualquer texto interno de versão deixado pelo JS base.
+        const topVersion=doc.querySelector('#forja34 .f34top span');
+        if(topVersion) topVersion.textContent='v'+VERSION;
+
+        // Não usamos mais o botão separado: as opções ficam na bancada antiga.
+        const floating=doc.getElementById('forja34-open');
+        if(floating) floating.style.display='none';
+
+        const bench=doc.querySelector('.bench');
+        if(!bench || doc.getElementById('forja-native-v343'))return;
+
+        if(!doc.getElementById('forja-native-style')){
+          const style=doc.createElement('style');
+          style.id='forja-native-style';
+          style.textContent=`
+            #forja-native-v343{border-color:#8c7955}
+            #forja-native-v343 .forja-new-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+            #forja-native-v343 .forja-new-badge{font:800 9px ui-monospace,monospace;background:#b32e28;color:#fff;padding:3px 6px;border:2px solid #2a2317;border-radius:4px}
+            .forja-native-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+            .forja-native-option{min-height:48px;text-align:left;display:flex;align-items:center;gap:7px;padding:7px;border:2px solid #7d6d4e;border-top-color:#fff8e8;border-left-color:#fff8e8;background:#dccdad;color:#2a2317;box-shadow:2px 2px 0 rgba(0,0,0,.18);cursor:pointer;font:700 10px/1.2 ui-monospace,monospace}
+            .forja-native-option:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(0,0,0,.18)}
+            .forja-native-option .ico{font-size:16px;flex:none}
+            @media(max-width:620px){.forja-native-grid{grid-template-columns:1fr}.forja-native-option{min-height:42px}}
+          `;
+          doc.head.appendChild(style);
+        }
+
+        const section=doc.createElement('section');
+        section.id='forja-native-v343';
+        section.className='slot';
+        section.innerHTML=`<div class="forja-new-title"><div><div class="eyebrow">Novos blocos</div><strong>Bedrock Script API</strong></div><span class="forja-new-badge">v${VERSION}</span></div><div class="forja-native-grid"></div>`;
+        const grid=section.querySelector('.forja-native-grid');
+
+        for(const [icon,name] of OPTIONS){
+          const b=doc.createElement('button');
+          b.type='button';
+          b.className='forja-native-option';
+          b.innerHTML=`<span class="ico">${icon}</span><span>${name}</span>`;
+          b.addEventListener('click',()=>{
+            const open=doc.getElementById('forja34-open');
+            if(open) open.click();
+            setTimeout(()=>{
+              const palette=[...doc.querySelectorAll('#forja34 .f34pal')];
+              const target=palette.find(x=>x.querySelector('strong')?.textContent.trim()===name);
+              if(target) target.click();
+            },30);
+          });
+          grid.appendChild(b);
+        }
+
+        // Fica literalmente junto das opções antigas, no começo da bancada.
+        bench.prepend(section);
+      }catch(e){ console.warn('[Forja integração nativa]',e); }
+    }
+
+    outer.addEventListener('load',()=>{
+      setTimeout(integrate,100);
+      setTimeout(integrate,500);
+      setTimeout(integrate,1200);
+    });
+    setInterval(integrate,700);
+  })();
+  </script>
 </body>
 </html>
