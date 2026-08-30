@@ -1,4 +1,4 @@
-name: Apply native Forja v3.5 integration
+name: Apply Forja v3.6 systems
 
 on:
   push:
@@ -13,16 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply flashlight v3.5.1 update
-        run: python3 tools/update_flashlight_v351.py
+      - name: Add System actions to THEN
+        run: python3 tools/add_system_actions_v360.py
       - name: Validate embedded editor JavaScript
         run: |
           python3 - <<'PY'
           import re, pathlib, subprocess
           s=pathlib.Path('decoded-scripts.html').read_text(encoding='utf-8')
-          assert 'Faixa próxima (blocos)' in s
-          assert 'globalThis.__forjaFlashlights' in s
-          assert "actionId:a.id||('action_'+ai)" in s
+          required=[
+            "group:'Sistema'", 'Sistema de cronômetro', 'Sistema de contagem regressiva',
+            'Sistema de cooldown', 'Sistema de tarefas', 'Sistema de objetivos',
+            'Sistema de moedas', 'Sistema de XP personalizado', 'Sistema de ranking',
+            'Sistema de equipes', 'Sistema de partidas', 'Sistema de lobby',
+            'Sistema de fila de jogadores', 'Sistema de votação', 'Sistema de checkpoints',
+            'Sistema de clima automático', 'Sistema de dados persistentes',
+            'Sistema de AFK / inatividade', 'Sistema de recompensas',
+            'Sistema de loja / compra', 'Sistema de máquina de estados',
+            'Carregamento com tempo definido', 'Quantidade de jogadores'
+          ]
+          for x in required: assert x in s, x
           scripts=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>',s,re.S|re.I)
           for i,js in enumerate(scripts):
               if not js.strip(): continue
@@ -32,12 +41,14 @@ jobs:
               if r.returncode:
                   print(r.stdout,r.stderr)
                   raise SystemExit(f'JS syntax failed in inline script {i}')
-          print('JavaScript syntax OK')
+          assert 'v3.6.0' in pathlib.Path('index.html').read_text(encoding='utf-8')
+          assert 'v3.6.0' in pathlib.Path('legacy.html').read_text(encoding='utf-8')
+          print('JavaScript syntax OK; System actions:',s.count("group:'Sistema'"))
           PY
-      - name: Commit tested update
+      - name: Commit tested v3.6.0
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add decoded-scripts.html legacy.html index.html
-          git commit -m "fix: lanterna por distancia e liga desliga"
+          git commit -m "feat: Forja v3.6.0 adiciona Sistemas dentro do ENTÃO"
           git push
