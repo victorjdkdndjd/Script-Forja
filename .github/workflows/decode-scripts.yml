@@ -1,0 +1,45 @@
+name: Decode embedded Scripts editor
+
+on:
+  push:
+    branches: [native-editor-integration]
+    paths: ['.github/workflows/decode-scripts.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode Scripts HTML
+        run: |
+          python3 - <<'PY'
+          import re, base64, pathlib
+          p = pathlib.Path('legacy.html')
+          text = p.read_text(encoding='utf-8')
+          m = re.search(r'<script type="text/plain" id="src-scripts">(.*?)</script>', text, re.S)
+          if not m:
+              raise SystemExit('src-scripts not found')
+          decoded = base64.b64decode(''.join(m.group(1).split())).decode('utf-8')
+          pathlib.Path('decoded-scripts.html').write_text(decoded, encoding='utf-8')
+          needles = ['Jogador usa um item', 'Mensagem no chat', '+ condição', '+ ação', 'QUANDO', 'ENTÃO']
+          lines = decoded.splitlines()
+          out=[]
+          for needle in needles:
+              out.append('\n===== '+needle+' =====')
+              for i,line in enumerate(lines):
+                  if needle.lower() in line.lower():
+                      a=max(0,i-25); b=min(len(lines),i+40)
+                      out.extend(f'{j+1:05d}: {lines[j]}' for j in range(a,b))
+          pathlib.Path('decoded-inspection.txt').write_text('\n'.join(out), encoding='utf-8')
+          print('decoded lines:', len(lines), 'bytes:', len(decoded.encode()))
+          PY
+      - name: Commit decoded working copy
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add decoded-scripts.html decoded-inspection.txt
+          git commit -m "chore: decode embedded Scripts editor for native integration"
+          git push
