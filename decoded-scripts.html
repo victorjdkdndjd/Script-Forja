@@ -2757,7 +2757,63 @@ Object.assign(ACTIONS, {
   removeBlockNative:{ label:'Remover bloco', needs:'loc', group:'Bloco', fields:[{k:'dx',t:'num',label:'Offset X',def:0},{k:'dy',t:'num',label:'Offset Y',def:0},{k:'dz',t:'num',label:'Offset Z',def:0},{k:'only',t:'text',label:'Só se for este bloco (vazio = qualquer)',ph:'minecraft:stone'}], multi:(c)=>{const p=`pr${c.i}`,b=`br${c.i}`;return [`const ${p}={x:${c.L}.x+${num(c.p.dx,0)},y:${c.L}.y+${num(c.p.dy,0)},z:${c.L}.z+${num(c.p.dz,0)}};`,`const ${b}=${c.D}.getBlock({x:Math.floor(${p}.x),y:Math.floor(${p}.y),z:Math.floor(${p}.z)});`,c.p.only?`if (${b}?.typeId === ${q(c.p.only)}) ${b}.setType("minecraft:air");`:`if (${b}) ${b}.setType("minecraft:air");`];}},
   chestItems:{ label:'Colocar baú com itens', needs:'loc', group:'Bloco', imports:['ItemStack'], fields:[{k:'dx',t:'num',label:'Offset X',def:0},{k:'dy',t:'num',label:'Offset Y',def:0},{k:'dz',t:'num',label:'Offset Z',def:0},{k:'items',t:'text',label:'Itens: slot=id,qtd; ...',def:'0=minecraft:diamond,3; 1=minecraft:apple,5'}], multi:(c)=>{const p=`pc${c.i}`,b=`bc${c.i}`,inv=`inv${c.i}`,it=forjaChestItems(c.p.items);const L=[`const ${p}={x:${c.L}.x+${num(c.p.dx,0)},y:${c.L}.y+${num(c.p.dy,0)},z:${c.L}.z+${num(c.p.dz,0)}};`,`const ${b}=${c.D}.getBlock({x:Math.floor(${p}.x),y:Math.floor(${p}.y),z:Math.floor(${p}.z)});`,`if (${b}) {`,`  ${b}.setType("minecraft:chest");`,`  const ${inv}=${b}.getComponent("minecraft:inventory")?.container;`,`  if (${inv}) {`];for(const x of it)L.push(`    ${inv}.setItem(${x.slot}, new ItemStack(${q(x.id)}, ${x.qtd}));`);L.push('  }','}');return L;}},
   modalForm:{ label:'Adicionar formulário livre', needs:'player', group:'Interface', ui:true, imports:['ModalFormData'], fields:[{k:'title',t:'text',label:'Título',def:'Formulário'},{k:'rows',t:'text',label:'Elementos separados por ;',def:'text|Nome|Digite aqui; toggle|Ativado|true; slider|Nível|0|10|1|5'}], multi:(c)=>{const f=`modal${c.i}`,L=[`const ${f}=new ModalFormData().title(${q(c.p.title||'Formulário')});`];for(const r of forjaFormRows(c.p.rows)){const t=(r[0]||'').toLowerCase();if(t==='header')L.push(`${f}.header(${q(r[1]||'Seção')});`);else if(t==='label')L.push(`${f}.label(${q(r[1]||'Texto')});`);else if(t==='divider')L.push(`${f}.divider();`);else if(t==='toggle')L.push(`${f}.toggle(${q(r[1]||'Ativado')}, { defaultValue: ${String(r[2]).toLowerCase()==='true'} });`);else if(t==='slider')L.push(`${f}.slider(${q(r[1]||'Nível')}, ${Number(r[2]||0)}, ${Number(r[3]||10)}, { valueStep: ${Number(r[4]||1)}, defaultValue: ${Number(r[5]||0)} });`);else if(t==='dropdown'){const opts=(r[2]||'Opção 1,Opção 2').split(',').map(q).join(', ');L.push(`${f}.dropdown(${q(r[1]||'Modo')}, [${opts}], { defaultValueIndex: ${Number(r[3]||0)} });`);}else L.push(`${f}.textField(${q(r[1]||'Texto')}, ${q(r[2]||'Digite aqui')});`);}L.push(`${f}.show(${c.T}).then((res)=>{ if (res.canceled) return; /* res.formValues */ }).catch(()=>{});`);return L;}},
-  flashlight:{ label:'Lanterna projetada', needs:'player', group:'Luz', system:true, fields:[{k:'level',t:'num',label:'Nível da luz (1–15)',def:15},{k:'range',t:'num',label:'Alcance',def:8},{k:'spacing',t:'num',label:'Espaçamento',def:1},{k:'ticks',t:'num',label:'Atualizar a cada (ticks)',def:2}], multi:(c)=>{const lv=Math.max(1,Math.min(15,Math.round(cnum(c.p.level,15)))),v=`lanterna${c.i}`,trail=`luzes${c.i}`;return [`const ${v}=${c.T};`,`let ${trail}=[];`,`const loopLanterna${c.i}=system.runInterval(()=>{`,`  try {`,`    for (const p of ${trail}) { const b=p.dimension.getBlock(p.location); if (b?.typeId.startsWith("minecraft:light_block")) b.setType("minecraft:air"); }`,`    ${trail}=[];`,`    const h=${v}.getHeadLocation(); const d=${v}.getViewDirection();`,`    for (let n=${num(c.p.spacing,1)}; n<=${num(c.p.range,8)}; n+=${num(c.p.spacing,1)}) {`,`      const p={x:Math.floor(h.x+d.x*n),y:Math.floor(h.y+d.y*n),z:Math.floor(h.z+d.z*n)}; const b=${v}.dimension.getBlock(p); if(!b)break;`,`      if (b.typeId!=="minecraft:air" && !b.typeId.startsWith("minecraft:light_block")) break;`,`      b.setType("minecraft:light_block_${lv}"); ${trail}.push({dimension:${v}.dimension,location:p});`,`    }`,`  } catch(e){ system.clearRun(loopLanterna${c.i}); }`,`}, ${Math.max(1,cnum(c.p.ticks,2))});`];}},
+  flashlight:{
+    label:'Lanterna projetada', needs:'player', group:'Luz', system:true,
+    fields:[
+      {k:'range',t:'num',label:'Alcance total',def:20},
+      {k:'nearDistance',t:'num',label:'Faixa próxima (blocos)',def:5},
+      {k:'nearLevel',t:'num',label:'Nível perto (1–15)',def:15},
+      {k:'farLevel',t:'num',label:'Nível depois da faixa (1–15)',def:7},
+      {k:'spacing',t:'num',label:'Espaçamento',def:1},
+      {k:'ticks',t:'num',label:'Atualizar a cada (ticks)',def:2}
+    ],
+    multi:(c)=>{
+      const range=Math.max(1,cnum(c.p.range,20));
+      const near=Math.max(0,Math.min(range,cnum(c.p.nearDistance,5)));
+      const nearLv=Math.max(1,Math.min(15,Math.round(cnum(c.p.nearLevel,15))));
+      const farLv=Math.max(1,Math.min(15,Math.round(cnum(c.p.farLevel,7))));
+      const spacing=Math.max(0.25,cnum(c.p.spacing,1));
+      const ticks=Math.max(1,cnum(c.p.ticks,2));
+      const uid=String(c.actionId||('flashlight_'+c.i)).replace(/[^a-zA-Z0-9_]/g,'_');
+      const pl=`lanterna_${uid}`;
+      const store=`flashStore_${uid}`;
+      const key=`flashKey_${uid}`;
+      const old=`flashOld_${uid}`;
+      const state=`flashState_${uid}`;
+      return [
+        `const ${pl}=${c.T};`,
+        `const ${store}=globalThis.__forjaFlashlights || (globalThis.__forjaFlashlights=new Map());`,
+        `const ${key}=${q(String(c.actionId||('flashlight_'+c.i)))} + ':' + ${pl}.id;`,
+        `const ${old}=${store}.get(${key});`,
+        `if (${old}) {`,
+        `  try { system.clearRun(${old}.run); } catch(e) {}`,
+        `  for (const p of (${old}.trail||[])) { try { const b=p.dimension.getBlock(p.location); if (b?.typeId.startsWith("minecraft:light_block")) b.setType("minecraft:air"); } catch(e) {} }`,
+        `  ${store}.delete(${key});`,
+        `} else {`,
+        `  const ${state}={trail:[],run:0};`,
+        `  ${store}.set(${key},${state});`,
+        `  ${state}.run=system.runInterval(()=>{`,
+        `    try {`,
+        `      for (const p of ${state}.trail) { const b=p.dimension.getBlock(p.location); if (b?.typeId.startsWith("minecraft:light_block")) b.setType("minecraft:air"); }`,
+        `      ${state}.trail=[];`,
+        `      const h=${pl}.getHeadLocation(); const d=${pl}.getViewDirection();`,
+        `      for (let n=${spacing}; n<=${range}; n+=${spacing}) {`,
+        `        const p={x:Math.floor(h.x+d.x*n),y:Math.floor(h.y+d.y*n),z:Math.floor(h.z+d.z*n)};`,
+        `        const b=${pl}.dimension.getBlock(p); if(!b) break;`,
+        `        if (b.typeId!=="minecraft:air" && !b.typeId.startsWith("minecraft:light_block")) break;`,
+        `        b.setType(n<=${near} ? "minecraft:light_block_${nearLv}" : "minecraft:light_block_${farLv}");`,
+        `        ${state}.trail.push({dimension:${pl}.dimension,location:p});`,
+        `      }`,
+        `    } catch(e) {`,
+        `      try { system.clearRun(${state}.run); } catch(_) {}`,
+        `      for (const p of ${state}.trail) { try { const b=p.dimension.getBlock(p.location); if (b?.typeId.startsWith("minecraft:light_block")) b.setType("minecraft:air"); } catch(_) {} }`,
+        `      ${store}.delete(${key});`,
+        `    }`,
+        `  }, ${ticks});`,
+        `}`
+      ];
+    }
+  },
   lightFollow:{ label:'Luz acompanha jogador', needs:'player', group:'Luz', system:true, fields:[{k:'level',t:'num',label:'Nível da luz (1–15)',def:15},{k:'dx',t:'num',label:'Offset X',def:0},{k:'dy',t:'num',label:'Offset Y',def:1},{k:'dz',t:'num',label:'Offset Z',def:0},{k:'ticks',t:'num',label:'Atualizar a cada (ticks)',def:2}], multi:(c)=>{const lv=Math.max(1,Math.min(15,Math.round(cnum(c.p.level,15)))),pl=`luzPl${c.i}`,old=`luzOld${c.i}`;return [`const ${pl}=${c.T};`,`let ${old}=null;`,`const loopLuz${c.i}=system.runInterval(()=>{`,`  try {`,`    const p={x:Math.floor(${pl}.location.x+${num(c.p.dx,0)}),y:Math.floor(${pl}.location.y+${num(c.p.dy,1)}),z:Math.floor(${pl}.location.z+${num(c.p.dz,0)})};`,`    if (${old} && (${old}.x!==p.x||${old}.y!==p.y||${old}.z!==p.z)) { const b=${pl}.dimension.getBlock(${old}); if(b?.typeId.startsWith("minecraft:light_block"))b.setType("minecraft:air"); }`,`    const b=${pl}.dimension.getBlock(p); if(b && (b.typeId==="minecraft:air"||b.typeId.startsWith("minecraft:light_block"))) b.setType("minecraft:light_block_${lv}");`,`    ${old}=p;`,`  } catch(e){ system.clearRun(loopLuz${c.i}); }`,`}, ${Math.max(1,cnum(c.p.ticks,2))});`];}},
   followBlock:{ label:'Bloco segue jogador', needs:'player', group:'Bloco', system:true, fields:[{k:'id',t:'text',label:'Bloco',def:'minecraft:glass'},{k:'dx',t:'num',label:'Offset X',def:0},{k:'dy',t:'num',label:'Offset Y',def:-1},{k:'dz',t:'num',label:'Offset Z',def:0},{k:'ticks',t:'num',label:'Atualizar a cada (ticks)',def:2}], multi:(c)=>{const pl=`segPl${c.i}`,old=`segOld${c.i}`,id=q(c.p.id||'minecraft:glass');return [`const ${pl}=${c.T};`,`let ${old}=null;`,`const loopSeg${c.i}=system.runInterval(()=>{`,`  try {`,`    const p={x:Math.floor(${pl}.location.x+${num(c.p.dx,0)}),y:Math.floor(${pl}.location.y+${num(c.p.dy,-1)}),z:Math.floor(${pl}.location.z+${num(c.p.dz,0)})};`,`    if (${old} && (${old}.x!==p.x||${old}.y!==p.y||${old}.z!==p.z)) { const b=${pl}.dimension.getBlock(${old}); if(b?.typeId===${id})b.setType("minecraft:air"); }`,`    const b=${pl}.dimension.getBlock(p); if(b?.typeId==="minecraft:air")b.setType(${id});`,`    ${old}=p;`,`  } catch(e){ system.clearRun(loopSeg${c.i}); }`,`}, ${Math.max(1,cnum(c.p.ticks,2))});`];}}
 });
@@ -2942,7 +2998,7 @@ function generateJS(){
     }
     addMeta(A);
     if(a.loc==='rotated'&&tgt){helpers.add('vetorRelativo');helpers.add('posRelativa');}
-    return {A,T,tg,tgt,Texpr,isList,ctx:{p:a.p||{},T:Texpr,tpl:makeTpl(rule),i:ai,O:((T.targets||[])[0]||{}).expr||(T.hasBlock?'block':Texpr),isPlayer:!!(tgt&&tgt.isPlayer),D:isList?`${Texpr}.dimension`:dimExprFor(rule,tgt),L:locExprFor(rule,a,tgt)}};
+    return {A,T,tg,tgt,Texpr,isList,ctx:{p:a.p||{},actionId:a.id||('action_'+ai),T:Texpr,tpl:makeTpl(rule),i:ai,O:((T.targets||[])[0]||{}).expr||(T.hasBlock?'block':Texpr),isPlayer:!!(tgt&&tgt.isPlayer),D:isList?`${Texpr}.dimension`:dimExprFor(rule,tgt),L:locExprFor(rule,a,tgt)}};
   };
   const actionCore = (rule,a,ai,indent,scopeExpr) => {
     ensureAction(a); const pre=' '.repeat(indent), out=[];
@@ -3846,6 +3902,10 @@ render();
   "Explodir depois de um tempo (com loop)": "Explode after a while (with loop)",
   "Exportar": "Export",
   "Faixas": "Bands",
+  "Alcance total": "Total range",
+  "Faixa próxima (blocos)": "Near range (blocks)",
+  "Nível perto (1–15)": "Near light level (1–15)",
+  "Nível depois da faixa (1–15)": "Light level after near range (1–15)",
   "Família": "Family",
   "Fase atual": "Current phase",
   "Fases": "Phases",
