@@ -13,12 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply and validate native editor patch
-        run: python3 tools/apply_native_v35.py
-      - name: Commit native working version
+      - name: Apply flashlight v3.5.1 update
+        run: python3 tools/update_flashlight_v351.py
+      - name: Validate embedded editor JavaScript
+        run: |
+          python3 - <<'PY'
+          import re, pathlib, subprocess
+          s=pathlib.Path('decoded-scripts.html').read_text(encoding='utf-8')
+          assert 'Faixa próxima (blocos)' in s
+          assert 'globalThis.__forjaFlashlights' in s
+          assert "actionId:a.id||('action_'+ai)" in s
+          scripts=re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>',s,re.S|re.I)
+          for i,js in enumerate(scripts):
+              if not js.strip(): continue
+              f=pathlib.Path(f'/tmp/check-{i}.js')
+              f.write_text(js,encoding='utf-8')
+              r=subprocess.run(['node','--check',str(f)],capture_output=True,text=True)
+              if r.returncode:
+                  print(r.stdout,r.stderr)
+                  raise SystemExit(f'JS syntax failed in inline script {i}')
+          print('JavaScript syntax OK')
+          PY
+      - name: Commit tested update
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add decoded-scripts.html legacy.html index.html native-v35-report.json
-          git commit -m "feat: integrar novas opções nativamente em QUANDO SE ENTÃO"
+          git add decoded-scripts.html legacy.html index.html
+          git commit -m "fix: lanterna por distancia e liga desliga"
           git push
